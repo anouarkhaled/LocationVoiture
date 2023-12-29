@@ -1,3 +1,5 @@
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +28,7 @@ void addCarToFile(struct Car *newCar) {
     FILE *file = fopen("car.txt", "a");
 
     if (file != NULL) {
-        fprintf(file, "%s %s %s %s\n", newCar->matricule, newCar->brand, newCar->model, newCar->status);
+        fwrite(newCar,sizeof(struct Car),1,file);
         fclose(file);
         printf("Voiture ajoutée avec succès.\n");
     } else {
@@ -62,9 +64,9 @@ void removeFaultyCarFromFile(char matricule[50]) {
 
     if (inputfile != NULL ) {
         struct Car car;
-        while (fscanf(inputfile, "%s %s %s %s\n", car.matricule, car.brand, car.model, car.status) != EOF) {
-            if (strcmp(car.matricule, matricule) == 1 || strcmp(car.status, "En panne") ==1) {
-                fprintf(outputfile, "%s %s %s %s\n", car.matricule, car.brand, car.model, car.status);
+        while (fread(&car,sizeof(struct Car),1,inputfile)) {
+            if (strcmp(car.matricule, matricule) == 0 && strcmp(car.status, "en_panne") ==0) {
+                fwrite(&car,sizeof(struct Car),1,outputfile);
             }
         }
 
@@ -109,8 +111,7 @@ void displayRentalsHistory() {
 
     if (file != NULL) {
         struct Rental rental;
-        while (fscanf(file, "%d %s %d/%d/%d %d\n", &rental.rentalID, rental.matricule,
-                      &rental.date.j, &rental.date.m, &rental.date.a, &rental.duree) != EOF) {
+        while (fread(&rental,sizeof(struct Rental),1,file)) {
             printf("Rental ID: %d\n", rental.rentalID);
             printf("Matricule: %s\n", rental.matricule);
             printf("Date: %02d/%02d/%04d\n", rental.date.j, rental.date.m, rental.date.a);
@@ -127,14 +128,14 @@ void displayAvailableCars() {
 
     if (file != NULL) {
         struct Car car;
-        while (fscanf(file, "%s %s %s %s\n", car.matricule, car.brand, car.model, car.status) != EOF) {
-            if (strcmp(car.status, "Disponible") == 0) {
+        while (fread(&car,sizeof(struct Car),1,file)) {
+           
                 printf("Car ID: %s\n", car.matricule);
                 printf("Marque: %s\n", car.brand);
                 printf("Modèle: %s\n", car.model);
                 printf("Statut: %s\n", car.status);
                 printf("--------------\n");
-            }
+            
         }
         fclose(file);
     } else {
@@ -147,13 +148,10 @@ void returnCarInCaseOfClaim(const char *matricule) {
 
     if (inputFile != NULL && outputFile != NULL) {
         struct Rental rental;
-        while (fscanf(inputFile, "%d %s %d/%d/%d %d\n", &rental.rentalID, rental.matricule,
-                      &rental.date.j, &rental.date.m, &rental.date.a, &rental.duree) != EOF) {
-            if (strcmp(rental.matricule, matricule) == 0) {
-                // Handle the return of the car and any other necessary actions
-            } else {
-                fprintf(outputFile, "%d %s %d/%d/%d %d\n", rental.rentalID, rental.matricule,
-                        rental.date.j, rental.date.m, rental.date.a, rental.duree);
+        while (fread(&rental, sizeof(struct Rental),1,inputFile)) {
+            if (strcmp(rental.matricule, matricule) !=0) {
+            
+                fwrite(&rental,sizeof(struct Rental),1,outputFile);
             }
         }
 
@@ -173,8 +171,8 @@ void rentCarFromFile(char m[50]) {
     if (file != NULL) {
         struct Car car;
         int found=0;
-        while (fscanf(file, "%s %s %s %s\n", car.matricule, car.brand, car.model, car.status) != EOF) {
-            if (strcmp(car.matricule, m) == 0 && strcmp(car.status, "Disponible") == 0) {
+        while (fread(&car,sizeof(struct Car),1,file)) {
+            if (strcmp(car.matricule, m) == 0 && strcmp(car.status, "disponible") == 0) {
                 found=1;
                 modifyCarStatus(car.matricule,"louée");
                 FILE *rentalFile = fopen("rental.txt", "a");
@@ -209,7 +207,6 @@ void rentCarFromFile(char m[50]) {
 int main() {
     int choice;
     char matricule[50];
-
     do {
         printf("\nMenu :\n");
         printf("1. ajouter une voiture\n");
@@ -222,7 +219,7 @@ int main() {
         printf("0. Quitter\n");
         printf("Choix : ");
         scanf("%d", &choice);
-
+        
         switch (choice) {
             case 1: {
                 struct Car newCar;
@@ -235,25 +232,26 @@ int main() {
                 strcpy(newCar.status,"disponible");
                 addCarToFile(&newCar);
                 break;
+  
             }
             case 2: {
                 printf("Entrez le matricule de la voiture à afficher : ");
-                scanf("%s", matricule);
+                scanf("%s",matricule);
                 displayCarDescription(matricule);
                 break;
             }
             case 3: {
                 printf("Entrez le matricule de la voiture à supprimer : ");
-                scanf("%s", matricule);
+                scanf("%s",matricule);
                 removeFaultyCarFromFile(matricule);
                 break;
             }
             case 4: {
                 char newStatus[20];
                 printf("Entrez le matricule de la voiture à modifier : ");
-                scanf("%s", matricule);
+                scanf("%s",matricule);
                 printf("Nouveau statut : ");
-                scanf("%s", newStatus);
+               scanf("%s",newStatus);
                 modifyCarStatus(matricule, newStatus);
                 break;
             }
@@ -263,20 +261,19 @@ int main() {
                 break;
             case 6: {
                 printf("Entrez le matricule de la voiture à retourner (réclamation) : ");
-                scanf("%s", matricule);
+               scanf("%s",matricule);
                 returnCarInCaseOfClaim(matricule);
                 break;
             }
             case 7:{
                  displayAvailableCars() ;
-                 printf("donner le matricule");
+                 printf("donner un matricule");
                  scanf("%s",matricule);
                  rentCarFromFile(matricule);
-
             }
-            case 0:
+            case 0:{
                 printf("Programme terminé.\n");
-                break;
+                break;}
             default:
                 printf("Choix invalide. Veuillez réessayer.\n");
         }
